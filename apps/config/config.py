@@ -1,9 +1,10 @@
-    """[summary]
-    project configulations difinition
+"""[summary]
+project configulations difinition
 
-    keys = config_name
-    value = config_value
-    """
+keys = config_name
+value = config_value
+"""
 dic_config = {
+    "source_folder" : r"apps/src/*.bag",
     
 }
