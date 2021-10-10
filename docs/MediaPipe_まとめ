@@ -1,0 +1,10 @@
+# MediaPipe まとめ
+
+## Poseについて
+
+### 種類
+
+1. Person/pose Detection Model (BlazePose)
+2. Pose Landmark Model (BlazePose GHUM 3D)
+
+
