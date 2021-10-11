@@ -32,16 +32,9 @@ def main():
 
     # get src folder path with glob
     bagfile_folder_path = glob.glob(cfg["source_folder"])
-    print(bagfile_folder_path)
 
     # if source file is not bagfile or bagfile doesnt exist,
     # close this program
-
-    if not bagfile_folder_path:
-        print("file doesn't exist.")
-        print("input files into apps/src/ folder")
-        exit()
-
     if os.path.splitext(bagfile_folder_path[0])[1] != ".bag":
         print(".bag file dont exist in apps/src/ folder.")
         print("Please input bagfile in that folder.")
@@ -66,9 +59,9 @@ def main():
     # get file stream for csv file
     #f = open(csvname, 'w', newline='')
     #writer = csv.writer(f)
-
+    
     # write header to csv
-    # writer.writerows(header)
+    #writer.writerows(header)
 
     try:
         # create pipeline
@@ -90,27 +83,27 @@ def main():
         playback.set_real_time(False)
 
         # get intrinsics
-        dpt_intr = rs.video_stream_profile(
-            profile.get_stream(rs.stream.depth)).get_intrinsics()
-        clo_intr = rs.video_stream_profile(
-            profile.get_stream(rs.stream.color)).get_intrinsics()
+        dpt_intr = rs.video_stream_profile(profile.get_stream(rs.stream.depth)).get_intrinsics()
+        clo_intr = rs.video_stream_profile(profile.get_stream(rs.stream.color)).get_intrinsics()
 
-        print("depth intrinsics\n"
-              f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"
-              f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"
-              f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
-        print("color intrinsics\n"
-              f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"
-              f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"
-              f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
-
+        print("depth intrinsics\n"\
+                f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"\
+                f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"\
+                f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
+        print("color intrinsics\n"\
+                f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"\
+                f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"\
+                f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
+        
         # depth filter preparing
         thres_fil = rs.threshold_filter(cfg["thres_min"], cfg["thres_max"])
+
 
         # Get product line for setting a supporting resolution
         device = profile.get_device()
         device_product_line = str(device.get_info(rs.camera_info.product_line))
         print(f"product name : {device_product_line}")
+
 
         found_rgb = False
         for s in device.sensors:
@@ -122,6 +115,7 @@ def main():
             print("This program need depth camera with color sensor.")
             exit(0)
 
+
         # Create an align object
         # rs.align allows us to perform alignment of depth frames to others frames
         # The "align_to" is the stream type to which we plan to align depth frames.
@@ -132,6 +126,7 @@ def main():
         framecount = cfg["initial_count"]
         count = cfg["initial_count"]
         timestamp = cfg["initial_timestamp"]
+
 
         # calc background cutting value
         depth_sensor = profile.get_device().first_depth_sensor()
@@ -157,8 +152,7 @@ def main():
 
             # Print metadata
             print('time_delta : ' + str(delta) + '[ms]')
-            print('frame_count : ' + str(framecount) +
-                  'timestamp' + str(timestamp))
+            print('frame_count : ' + str(framecount) + 'timestamp' + str(timestamp))
             print('backend_timestamp : ' + str(backend_timestamp))
             #print('datetime :' + ts_date + 'millis' + ts_millis)
 
@@ -185,10 +179,11 @@ def main():
             # background remove
             depth_image_3d = np.dstack((depth_image, depth_image, depth_image))
             bg_remove_color[
-                (depth_image_3d <= clip_distance_forw) |
+                (depth_image_3d <= clip_distance_forw) | 
                 (depth_image_3d >= clip_distance_back)] = cfg["fill_color"]
-
+            
             # pose estimate using background removing image
+            
 
             # RGB composition converting (RGB to BGR)
             bg_remove_color = cv2.cvtColor(bg_remove_color, cv2.COLOR_RGB2BGR)
@@ -197,8 +192,7 @@ def main():
             # Render images:
             #   depth align to color on left
             #   depth on right
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(
-                depth_image, alpha=0.03), cv2.COLORMAP_JET)
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
             images = np.hstack((bg_remove_color, depth_colormap))
 
             cv2.imshow("Camera Stream", images)

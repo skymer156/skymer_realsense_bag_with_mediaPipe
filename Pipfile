@@ -13,10 +13,9 @@ mediapipe = "*"
 [dev-packages]
 flake8 = "*"
 autopep8 = "*"
-pylint = "*"
 
 [requires]
-python_version = "3.7.9"
+python_version = "3.7"
 
 [scripts]
 start = "python apps -m"
