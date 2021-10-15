@@ -27,12 +27,10 @@ import mediapipe as mp
 #! convert into module
 #! postprocess processing regarding realsense type
 #! json or csv streaming
-#! extract magic number
-#! add folder check function
+
 
 def clipping_background():
     raise NotImplementedError
-
 
 def main():
     # config dcitionary
@@ -46,6 +44,7 @@ def main():
         print("file doesn't exist.")
         print("input files into apps/src/ folder")
         exit()
+
 
     # if source file is not bagfile or bagfile doesnt exist,
     # close this program
@@ -73,9 +72,9 @@ def main():
     # get file stream for csv file
     #f = open(csvname, 'w', newline='')
     #writer = csv.writer(f)
-
+    
     # write header to csv
-    # writer.writerows(header)
+    #writer.writerows(header)
 
     try:
         # create pipeline
@@ -85,10 +84,10 @@ def main():
         rs_cfg = rs.config()
 
         #! need change to enable user to switch processing bagfile
-        #! change to apply to folder instead file
+        #! change to apply to folder instead file 
         # Tell config that we will use a recorded device from file to be used by the pipeline through playback.
         rs.config.enable_device_from_file(
-            rs_cfg, bagfile_folder_path[2], repeat_playback=False)
+            rs_cfg, bagfile_folder_path[1], repeat_playback=False)
 
         # Start streaming from file
         profile = pipeline.start(rs_cfg)
@@ -98,27 +97,27 @@ def main():
         playback.set_real_time(False)
 
         # get intrinsics
-        dpt_intr = rs.video_stream_profile(
-            profile.get_stream(rs.stream.depth)).get_intrinsics()
-        clo_intr = rs.video_stream_profile(
-            profile.get_stream(rs.stream.color)).get_intrinsics()
+        dpt_intr = rs.video_stream_profile(profile.get_stream(rs.stream.depth)).get_intrinsics()
+        clo_intr = rs.video_stream_profile(profile.get_stream(rs.stream.color)).get_intrinsics()
 
-        print("depth intrinsics\n"
-              f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"
-              f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"
-              f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
-        print("color intrinsics\n"
-              f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"
-              f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"
-              f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
-
+        print("depth intrinsics\n"\
+                f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"\
+                f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"\
+                f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
+        print("color intrinsics\n"\
+                f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"\
+                f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"\
+                f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
+        
         # depth filter preparing
         thres_fil = rs.threshold_filter(cfg["thres_min"], cfg["thres_max"])
+
 
         # Get product line for setting a supporting resolution
         device = profile.get_device()
         device_product_line = str(device.get_info(rs.camera_info.product_line))
         print(f"product name : {device_product_line}")
+
 
         found_rgb = False
         for s in device.sensors:
@@ -129,6 +128,7 @@ def main():
         if not found_rgb:
             print("This program need depth camera with color sensor.")
             exit(0)
+
 
         # Create an align object
         # rs.align allows us to perform alignment of depth frames to others frames
@@ -141,6 +141,7 @@ def main():
         count = cfg["initial_count"]
         timestamp = cfg["initial_timestamp"]
 
+
         # calc background cutting value
         depth_sensor = profile.get_device().first_depth_sensor()
         depth_scale = depth_sensor.get_depth_scale()
@@ -149,19 +150,7 @@ def main():
 
         cv2.namedWindow("Camera Stream", cv2.WINDOW_AUTOSIZE)
 
-        # mediapipe pose instance
-        mp_drawing = mp.solutions.drawing_utils
-        mp_drawing_styles = mp.solutions.drawing_styles
-        mp_pose = mp.solutions.pose
-
-        # pose instance
-        pose = mp_pose.Pose(
-            static_image_mode=True,
-            model_complexity=2,
-            enable_segmentation=True,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        )
+        
 
         # Streaming loop
         while True:
@@ -179,8 +168,7 @@ def main():
 
             # Print metadata
             print('time_delta : ' + str(delta) + '[ms]')
-            print('frame_count : ' + str(framecount) +
-                  'timestamp ' + str(timestamp))
+            print('frame_count : ' + str(framecount) + 'timestamp' + str(timestamp))
             print('backend_timestamp : ' + str(backend_timestamp))
             #print('datetime :' + ts_date + 'millis' + ts_millis)
 
@@ -207,36 +195,21 @@ def main():
             # background remove
             depth_image_3d = np.dstack((depth_image, depth_image, depth_image))
             bg_remove_color[
-                ((depth_image_3d <= clip_distance_forw) |
-                 (depth_image_3d >= clip_distance_back))
-            ] = cfg["fill_color"]
+                (depth_image_3d <= clip_distance_forw) | 
+                (depth_image_3d >= clip_distance_back)] = cfg["fill_color"]
+            
+            # pose estimate using background removing image
+            
 
             # RGB composition converting (RGB to BGR)
-            # bg_remove_color = cv2.cvtColor(bg_remove_color, cv2.COLOR_RGB2BGR)
-            # color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-
-            # pose estimate using background removing image
-            results = pose.process(color_image)
-
-            # pose estimation check
-            if not results.pose_landmarks:
-            #! not implemented. i want exception csv writing if not pose estimate.
-                continue
+            bg_remove_color = cv2.cvtColor(bg_remove_color, cv2.COLOR_RGB2BGR)
+            color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
 
             # Render images:
             #   depth align to color on left
             #   depth on right
-            color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-            mp_drawing.draw_landmarks(
-                color_image,
-                results.pose_landmarks,
-                mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
-            )
-
-            depth_colormap = cv2.applyColorMap(
-                cv2.convertScaleAbs(depth_image, alpha=1), cv2.COLORMAP_JET)
-            images = np.hstack((color_image, depth_colormap))
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+            images = np.hstack((bg_remove_color, depth_colormap))
 
             cv2.imshow("Camera Stream", images)
             key = cv2.waitKey(1)
@@ -250,5 +223,4 @@ def main():
         print(f"Exception occured: \'{ex}\'")
 
     finally:
-        pose.close()
         pass
