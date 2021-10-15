@@ -6,10 +6,10 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
 pose = mp_pose.Pose(
-    static_image_mode = True,
+    static_image_mode=True,
     min_detection_confidence=0.5,
     model_complexity=2
-    )
+)
 
 img = cv2.imread(r"apps/src/sample.jpg")
 cv2.imshow("sample image", img)
@@ -27,7 +27,7 @@ width, height, _ = img.shape
 for i in mp_pose.PoseLandmark:
     point_x = results.pose_landmarks.landmark[i].x * width
     point_y = results.pose_landmarks.landmark[i].y * height
-    print(str(i),": x {0} , y {1}".format(point_x, point_y))
+    print(str(i), ": x {0} , y {1}".format(point_x, point_y))
 
 annotated_image = img.copy()
 mp_drawing.draw_landmarks(
@@ -37,7 +37,7 @@ mp_drawing.draw_landmarks(
     landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
 )
 
-cv2.imshow("pose estimate image",annotated_image)
+cv2.imshow("pose estimate image", annotated_image)
 
 key = cv2.waitKey(0)
 
