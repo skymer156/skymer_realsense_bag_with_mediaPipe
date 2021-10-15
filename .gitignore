@@ -5,3 +5,4 @@ apps/config/__pycache__
 *.pyc
 *.jpg
 *.png
+*.csv

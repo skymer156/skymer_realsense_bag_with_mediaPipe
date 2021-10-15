@@ -17,21 +17,52 @@ import datetime
 import csv
 # Import mediapipe library
 import mediapipe as mp
+# Import itertool for process iterator
+import itertools
+# Import traceback for debug
+import traceback
+
 
 # need to change
-#! alignment between depth and color frame
-#! implement 2d pose estimation library (poseNet, MediaPipe, OpenPose, SkeletonTracking)
-#! 2d point to 3D camera coordinates converting
-#! judge configulation following realsense type
-#! create GUI tools
-#! convert into module
-#! postprocess processing regarding realsense type
-#! json or csv streaming
-#! extract magic number
-#! add folder check function
+# alignment between depth and color frame
+# implement 2d pose estimation library (poseNet, MediaPipe, OpenPose, SkeletonTracking)
+# 2d point to 3D camera coordinates converting
+# judge configulation following realsense type
+# create GUI tools
+# convert into module
+# postprocess processing regarding realsense type
+# json or csv streaming
+# extract magic number
+# add folder check function
+# get ndarray memory with estimate frame
 
 def clipping_background():
     raise NotImplementedError
+
+
+def width_clip(img_width, value):
+    if value <= 0:
+        return 0
+    elif value >= img_width:
+        return img_width - 1
+    return value
+
+
+def height_clip(img_height, value):
+    if value < 0:
+        return 0
+    elif value >= img_height:
+        return img_height - 1
+    return value
+
+
+def is_inshape(width: int, height: int, pixels) -> bool:
+    bool_inshape = True
+    if not 0 <= pixels[0] < width:
+        bool_inshape = False
+    if not 0 <= pixels[1] < height:
+        bool_inshape = False
+    return bool_inshape
 
 
 def main():
@@ -71,8 +102,8 @@ def main():
         dt.strftime(cfg["datetime_format"]) + cfg["csvname_ext"]
 
     # get file stream for csv file
-    #f = open(csvname, 'w', newline='')
-    #writer = csv.writer(f)
+    f = open(csvname, 'w', newline='')
+    writer = csv.writer(f, lineterminator='\n')
 
     # write header to csv
     # writer.writerows(header)
@@ -96,6 +127,11 @@ def main():
         # no real time processing setting
         playback = profile.get_device().as_playback()
         playback.set_real_time(False)
+        duration = playback.get_duration()
+        estimate_frame_length = cfg["fps"] * \
+            (duration.seconds + duration.microseconds / 1.0e6)
+        print(f"bagfile estimate frame length is {estimate_frame_length}")
+        print(f"bagfile total time is {duration}")
 
         # get intrinsics
         dpt_intr = rs.video_stream_profile(
@@ -138,7 +174,7 @@ def main():
 
         # counter for csv
         framecount = cfg["initial_count"]
-        count = cfg["initial_count"]
+        count = -1
         timestamp = cfg["initial_timestamp"]
 
         # calc background cutting value
@@ -158,15 +194,18 @@ def main():
         pose = mp_pose.Pose(
             static_image_mode=True,
             model_complexity=2,
-            enable_segmentation=True,
+            enable_segmentation=False,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
+
+        datalist_for_csv = []
 
         # Streaming loop
         while True:
             # Get frameset of depth
             frames = pipeline.wait_for_frames()
+            count += 1
 
             # Get frame meta data
             framecount = frames.get_frame_number()
@@ -193,6 +232,7 @@ def main():
 
             # Validate that both frames are valid
             if not color_frame or not depth_frame:
+                print("each frame doesnt exist!!")
                 continue
 
             # Colorize depth frame to jet colormap
@@ -200,7 +240,7 @@ def main():
             color_image = np.asanyarray(color_frame.get_data())
             bg_remove_color = color_image.copy()
 
-            #! insert LiDAR post processing
+            # need to insert LiDAR post processing
             filted_frames = thres_fil.process(depth_frame)
             filted_frames = filted_frames.as_depth_frame()
 
@@ -220,8 +260,53 @@ def main():
 
             # pose estimation check
             if not results.pose_landmarks:
-            #! not implemented. i want exception csv writing if not pose estimate.
+                print("not detected!!")
+                #! not implemented. i want exception csv writing if not pose estimate.
                 continue
+
+            # get image width and height
+            height, width, _ = color_image.shape
+
+            # get xy pixel : list in list [ [x, y (joint)] each joint  ]
+            joint_xy_pixels = [
+                [
+                    round(results.pose_landmarks.landmark[joint].x * width),
+                    round(results.pose_landmarks.landmark[joint].y * height)
+                ] for joint in mp_pose.PoseLandmark
+            ]
+
+            # cliped joints xy pixels generator (not in memory)
+            clip_xy_pixels = (
+                [width_clip(width, xy[0]), height_clip(height, xy[1])]
+                for xy in joint_xy_pixels
+            )
+
+            # depth value generator in joint pixel
+            depth_value = (
+                filted_frames.get_distance(
+                    pixel[0], pixel[1]
+                ) for pixel in clip_xy_pixels
+            )
+
+            # realsense 3D points in camera coordinates
+            points = (
+                rs.rs2_deproject_pixel_to_point(
+                    clo_intr, joint_xy_pixels[i], depth
+                ) for i, depth in enumerate(depth_value)
+            )
+
+            # if joint isn't in image area, convert point [-1,-1,-1]
+            points_iter = itertools.chain.from_iterable(
+                (point if is_inshape(width, height, joint_xy_pixels[i]
+                                     ) else [-1, -1, -1]
+                 ) for i, point in enumerate(points)
+            )
+
+            datalist_for_csv.append(list(points_iter))
+
+            """ for joint in mp_pose.PoseLandmark:
+                print(
+                    f"{str(joint)} : x {next(points_iter)} y {next(points_iter)} z {next(points_iter)}") """
 
             # Render images:
             #   depth align to color on left
@@ -248,6 +333,9 @@ def main():
 
     except Exception as ex:
         print(f"Exception occured: \'{ex}\'")
+        traceback.print_exc()
+        writer.writerow(datalist_for_csv)
+        writer.close()
 
     finally:
         pose.close()

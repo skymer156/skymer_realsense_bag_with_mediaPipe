@@ -21,3 +21,4 @@ python_version = "3.7"
 [scripts]
 start = "python apps -m"
 mediapipe = "python apps/test_mediaPipe.py"
+test = "python apps/test.py"
