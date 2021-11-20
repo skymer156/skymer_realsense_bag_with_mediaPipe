@@ -10,4 +10,8 @@ You must change python interpleter if you use other version python interpleter i
 After check it, open terminal and command `pipenv run start`.
 in details pipenv run start means `pipenv run python apps -m`
 
+※ need to make dir apps/src
+
+※ change config if you need ( config file is in apps/config )
+
 ## 開発時参考文献
