@@ -22,5 +22,6 @@ dic_config = {
     "enable_segmentation": True,
     "min_detection_confidence": 0.5,
     "min_tracking_confidence": 0.5,
-    "fps": 30
+    "fps": 30,
+    "image_output": r'apps/images/'
 }

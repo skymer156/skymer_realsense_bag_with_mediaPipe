@@ -302,7 +302,8 @@ def main():
                  ) for i, point in enumerate(points)
             )
 
-            datalist_for_csv.append(list(points_iter))
+            # datalist_for_csv.append(list(points_iter))
+            writer.writerow(list(points_iter))
 
             """ for joint in mp_pose.PoseLandmark:
                 print(
@@ -334,7 +335,6 @@ def main():
     except Exception as ex:
         print(f"Exception occured: \'{ex}\'")
         traceback.print_exc()
-        writer.writerow(datalist_for_csv)
         writer.close()
 
     finally:

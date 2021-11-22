@@ -1,5 +1,6 @@
 # installing
 
+0. first of all, you must clone this repository.
 1. install python 3.7. (should install latest atable version)
 2. install pipenv with using pip. The command line code is :`pip install pipenv`
 3. use pipenv command. :`pipenv sync`
