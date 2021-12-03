@@ -1,3 +1,9 @@
+# aim
+
+RealSense L515で取得したbagファイルをmediaPipeで二次元姿勢推定し、
+取得ピクセル位置から三次元座標の復元を行う、冗長なアプリケーションです。
+mediaPipe側で三次元姿勢推定は可能ですが、realsenseを使用したいためこのような構成にしています。
+
 # installing
 
 1. install python 3.7. (should install latest atable version)
