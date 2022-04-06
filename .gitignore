@@ -6,3 +6,5 @@ apps/config/__pycache__
 *.jpg
 *.png
 *.csv
+
+.pytest_cache

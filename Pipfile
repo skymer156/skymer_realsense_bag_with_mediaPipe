@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pysimplegui = "*"
 numpy = "*"
 opencv-python = "*"
 pyrealsense2 = "*"
@@ -20,6 +19,5 @@ python_version = "3.7"
 
 [scripts]
 start = "python apps -m"
-mediapipe = "python apps/test_mediaPipe.py"
-test = "python apps/test.py"
-mediapipe2D = "python apps/process_2dpixels.py"
+mediapipe = "python apps/mediaPipe_sample.py"
+mediapipe2D = "python apps/process_to_2d.py"

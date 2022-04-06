@@ -105,8 +105,6 @@ def main():
     f = open(csvname, 'w', newline='')
     writer = csv.writer(f, lineterminator='\n')
 
-    # write header to csv
-    # writer.writerows(header)
 
     try:
         # create pipeline
@@ -119,7 +117,7 @@ def main():
         #! change to apply to folder instead file
         # Tell config that we will use a recorded device from file to be used by the pipeline through playback.
         rs.config.enable_device_from_file(
-            rs_cfg, bagfile_folder_path[2], repeat_playback=False)
+            rs_cfg, bagfile_folder_path[0], repeat_playback=False)
 
         # Start streaming from file
         profile = pipeline.start(rs_cfg)
@@ -198,8 +196,6 @@ def main():
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
-
-        datalist_for_csv = []
 
         # Streaming loop
         while True:
@@ -339,4 +335,3 @@ def main():
 
     finally:
         pose.close()
-        pass

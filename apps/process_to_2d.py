@@ -291,7 +291,7 @@ def main():
                         for i, pixels in enumerate(clip_xy_pixels)
                 )
 
-                # if joint isn't in image area, convert point [-1,-1,-1]
+                # if joint isn't in image area, convert point [-1,-1]
                 pixels_iter = itertools.chain.from_iterable(removed_xy_pixels)
 
                 # datalist_for_csv.append(list(points_iter))
