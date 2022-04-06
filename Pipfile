@@ -9,6 +9,7 @@ numpy = "*"
 opencv-python = "*"
 pyrealsense2 = "*"
 mediapipe = "*"
+pillow = "*"
 
 [dev-packages]
 flake8 = "*"
