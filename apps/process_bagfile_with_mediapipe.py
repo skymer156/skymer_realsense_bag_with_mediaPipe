@@ -1,4 +1,5 @@
 # project config loading
+import datetime
 from config import config
 
 # exception
@@ -17,14 +18,14 @@ import glob
 import mediapipe as mp
 
 # need to change
-#! alignment between depth and color frame
-#! implement 2d pose estimation library (poseNet, MediaPipe, OpenPose, SkeletonTracking)
-#! 2d point to 3D camera coordinates converting
-#! judge configulation following realsense type
-#! create GUI tools
-#! convert into module
-#! postprocess processing regarding realsense type
-#! json or csv streaming
+# TODO alignment between depth and color frame
+# TODO implement 2d pose estimation library (poseNet, MediaPipe, OpenPose, SkeletonTracking)
+# TODO 2d point to 3D camera coordinates converting
+# TODO judge configulation following realsense type
+# TODO create GUI tools
+# TODO convert into module
+# TODO postprocess processing regarding realsense type
+# TODO json or csv streaming
 
 
 class BagfileEndException(Exception):
@@ -67,7 +68,10 @@ def setup_logger(name, logfile='LOGFILENAME.log'):
 
 
 def main():
+    # 疎結合にしたいので、
+    
     # config dcitionary
+    # TODO 依存性あり。
     cfg = config.dic_config
 
     # get src folder path with glob
@@ -101,7 +105,7 @@ def main():
     # header.append('millis')
 
     # get now date and get csvname from datetime
-    # dt = datetime.datetime.now()
+    dt = datetime.datetime.now()
 
     # mediapipe pose instance
     mp_drawing = mp.solutions.drawing_utils
@@ -124,8 +128,8 @@ def main():
         # Create a config object
         rs_cfg = rs.config()
 
-        #! need change to enable user to switch processing bagfile
-        #! change to apply to folder instead file
+        # TODO need change to enable user to switch processing bagfile
+        # TODO change to apply to folder instead file
         # Tell config that we will use a recorded device from file to be used by the pipeline through playback.
         rs.config.enable_device_from_file(
             rs_cfg, bagfile_folder_path[0], repeat_playback=False)
@@ -232,7 +236,7 @@ def main():
             color_image = np.asanyarray(color_frame.get_data())
             bg_remove_color = color_image.copy()
 
-            #! insert LiDAR post processing
+            # TODO insert LiDAR post processing
             filted_frames = thres_fil.process(depth_frame)
             filted_frames = filted_frames.as_depth_frame()
 

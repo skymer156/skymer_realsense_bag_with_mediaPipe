@@ -21,3 +21,5 @@ in details pipenv run start means `pipenv run python apps -m`
 ※ change config if you need ( config file is in apps/config )
 
 ## 開発時参考文献
+
+[ユーザー定義クラスについて](https://python.keicode.com/lang/python-user-defined-exception.php)

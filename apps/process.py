@@ -30,6 +30,7 @@ import mediapipe as mp
 #! extract magic number
 #! add folder check function
 
+
 def clipping_background():
     raise NotImplementedError
 
@@ -67,8 +68,8 @@ def main():
 
     # get now date and get csvname from datetime
     dt = datetime.datetime.now()
-    csvname = cfg["output_folder"] + \
-        dt.strftime(cfg["datetime_format"]) + cfg["csvname_ext"]
+    #csvname = cfg["output_folder"] + \
+    #    dt.strftime(cfg["datetime_format"]) + cfg["csvname_ext"]
 
     # get file stream for csv file
     #f = open(csvname, 'w', newline='')
@@ -220,7 +221,7 @@ def main():
 
             # pose estimation check
             if not results.pose_landmarks:
-            #! not implemented. i want exception csv writing if not pose estimate.
+                #! not implemented. i want exception csv writing if not pose estimate.
                 continue
 
             # Render images:
