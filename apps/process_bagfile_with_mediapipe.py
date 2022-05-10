@@ -1,8 +1,4 @@
-# project config loading
-import datetime
-from config import config
-
-# exception
+# exception relations
 import sys
 # First import library
 import pyrealsense2 as rs
@@ -12,8 +8,6 @@ import numpy as np
 import cv2
 # Import os.path for file path manipulation
 import os.path
-# Import glob for fetching bagfile folder series
-import glob
 # Import mediapipe library
 import mediapipe as mp
 
@@ -67,28 +61,29 @@ def setup_logger(name, logfile='LOGFILENAME.log'):
     return logger
 
 
-def main():
-    # 疎結合にしたいので、
-    
-    # config dcitionary
-    # TODO 依存性あり。
-    cfg = config.dic_config
+def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/test.bag"):
 
-    # get src folder path with glob
-    bagfile_folder_path = glob.glob(cfg["source_folder"])
+    # logger file exist check
+    logfiledir: str = os.path.dirname(os.path.abspath(__file__)) + '/log'
+    if not os.path.exists(logfiledir):
+        print(logfiledir)
+        os.makedirs(logfiledir)
+
+    # get logfile path
+    logfilepath = logfiledir + '/' + logfilename
 
     # get logger instance
-    logger = setup_logger(__name__, './log/process_for_videostream.log')
+    logger = setup_logger(__name__, logfilepath)
 
     # if bagfile path doesn't exist, output alert and stop this process.
-    if not bagfile_folder_path:
+    if not bagfilepath:
         logger.warning("file doesn't exist.")
         logger.warning("input files into apps/src/ folder")
         exit()
 
     # if source file is not bagfile or bagfile doesnt exist,
     # close this program
-    if os.path.splitext(bagfile_folder_path[0])[1] != ".bag":
+    if os.path.splitext(bagfilepath)[1] != ".bag":
         logger.warning(".bag file dont exist in apps/src/ folder.")
         logger.warning("Please input bagfile in that folder.")
         exit()
@@ -96,7 +91,7 @@ def main():
     # for csv header
     # coord = ['x', 'y', 'z']
     # header = ['joint' + str(i//3) + '_' + str(coord[i % 3])
-    #          for i in range(cfg["bone_number"] * len(coord))]
+    #          for i in range(est_config["bone_number"] * len(coord))]
     # header.append('framecount')
     # header.append('timedelta[ms]')
     # header.append('UNIXtimestamp[ms]')
@@ -104,8 +99,9 @@ def main():
     # header.append('datetime')
     # header.append('millis')
 
-    # get now date and get csvname from datetime
-    dt = datetime.datetime.now()
+    # TODO mp poseでランドマークが取得可能。これを元にヘッダを作成する。
+    # mp_poseは33個の特徴点。
+    # mp_pose.PoseLandmarkで取得可能。
 
     # mediapipe pose instance
     mp_drawing = mp.solutions.drawing_utils
@@ -132,7 +128,7 @@ def main():
         # TODO change to apply to folder instead file
         # Tell config that we will use a recorded device from file to be used by the pipeline through playback.
         rs.config.enable_device_from_file(
-            rs_cfg, bagfile_folder_path[0], repeat_playback=False)
+            rs_cfg, bagfilepath, repeat_playback=False)
 
         # Start streaming from file
         profile = pipeline.start(rs_cfg)
@@ -148,16 +144,17 @@ def main():
             profile.get_stream(rs.stream.color)).get_intrinsics()
 
         logger.debug("depth intrinsics\n"
-                    f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"
-                    f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"
-                    f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
+                     f"intr width : {dpt_intr.width}, intr height : {dpt_intr.height}\n"
+                     f"intr fx : {dpt_intr.fx}, intr fy : {dpt_intr.fy}\n"
+                     f"intr ppx : {dpt_intr.ppx}, intr ppy : {dpt_intr.ppy}\n")
         logger.debug("color intrinsics\n"
-                    f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"
-                    f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"
-                    f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
+                     f"intr width : {clo_intr.width}, intr height : {clo_intr.height}\n"
+                     f"intr fx : {clo_intr.fx}, intr fy : {clo_intr.fy}\n"
+                     f"intr ppx : {clo_intr.ppx}, intr ppy : {clo_intr.ppy}\n")
 
         # depth filter preparing
-        thres_fil = rs.threshold_filter(cfg["thres_min"], cfg["thres_max"])
+        thres_fil = rs.threshold_filter(
+            est_config["thres_min"], est_config["thres_max"])
 
         # Get product line for setting a supporting resolution
         device = profile.get_device()
@@ -181,15 +178,15 @@ def main():
         align = rs.align(align_to)
 
         # counter for csv
-        framecount = cfg["initial_count"]
-        count = cfg["initial_count"]
-        timestamp = cfg["initial_timestamp"]
+        framecount = est_config["initial_count"]
+        count = est_config["initial_count"]
+        timestamp = est_config["initial_timestamp"]
 
         # calc background cutting value
         depth_sensor = profile.get_device().first_depth_sensor()
         depth_scale = depth_sensor.get_depth_scale()
-        clip_distance_forw = cfg["fill_min"] / depth_scale
-        clip_distance_back = cfg["fill_max"] / depth_scale
+        clip_distance_forw = est_config["fill_min"] / depth_scale
+        clip_distance_back = est_config["fill_max"] / depth_scale
 
         cv2.namedWindow("Camera Stream", cv2.WINDOW_AUTOSIZE)
 
@@ -226,6 +223,7 @@ def main():
 
             # Validate that both frames are valid
             if not color_frame or not depth_frame:
+                logger.debug("frame skip occured")
                 continue
 
             # count update
@@ -244,7 +242,7 @@ def main():
             depth_image_3d = np.dstack((depth_image, depth_image, depth_image))
             bg_remove_color[
                 (depth_image_3d <= clip_distance_forw) |
-                (depth_image_3d >= clip_distance_back)] = cfg["fill_color"]
+                (depth_image_3d >= clip_distance_back)] = est_config["fill_color"]
 
             # pose estimate using background removing image
 
@@ -255,6 +253,8 @@ def main():
                 mp_pose.POSE_CONNECTIONS,
                 landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
             )
+            
+            # TODO 二次元座標、三次元座標をcsvファイルに出力する
 
             # RGB composition converting (RGB to BGR)
             bg_remove_color = cv2.cvtColor(bg_remove_color, cv2.COLOR_RGB2BGR)
@@ -287,4 +287,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    from config.config import dic_config
+    pose_estimate("process_for_videostream.log",
+                  dic_config, r"C:\Users\yota0\Documents\Yota\program\python_proj\MediaPipe\skeletonTracking_Lider\apps\src\kamiyama.bag")

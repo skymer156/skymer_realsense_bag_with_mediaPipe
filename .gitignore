@@ -11,3 +11,4 @@ tests
 *.bag
 *.csv
 .pytest_cache
+apps/log/*
