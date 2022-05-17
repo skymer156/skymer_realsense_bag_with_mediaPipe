@@ -140,7 +140,7 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
 
     # header info
     header_2D = generate_csv_header(landmarklist, axis_2D)
-    header_3D = generate_csv_header(landmarklist, axis_3D)
+    #header_3D = generate_csv_header(landmarklist, axis_3D)
 
     # open csv stream
     outfile2D = f'{outputdir}/{filename}_2D.csv'
@@ -157,13 +157,14 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
         exit(0)
 
     f_2D = open(f'{outfile2D}', 'w')
-    f_3D = open(f'{outfile2D}', 'w')
+    #f_3D = open(f'{outfile2D}', 'w')
     writer_2D = csv.writer(f_2D)
-    writer_3D = csv.writer(f_3D)
+    #writer_3D = csv.writer(f_3D)
 
     try:
         # write header
         writer_2D.writerow(header_2D)
+        #writer_3D.writerow(header_3D)
 
         # create pipeline
         pipeline = rs.pipeline()
@@ -314,6 +315,7 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
                     str(i), point_x, point_y, point_z))
 
             # TODO 二次元座標、三次元座標をcsvファイルに出力する
+            writer_2D.writerow(joint_pixels)
 
             # RGB composition converting (RGB to BGR)
             bg_remove_color = cv2.cvtColor(bg_remove_color, cv2.COLOR_RGB2BGR)
