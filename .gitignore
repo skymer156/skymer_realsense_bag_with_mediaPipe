@@ -12,3 +12,4 @@ tests
 *.csv
 .pytest_cache
 apps/log/*
+apps/log/process_for_videostream.log

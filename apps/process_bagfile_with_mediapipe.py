@@ -1,4 +1,6 @@
-# exception relations
+# csv output library
+import csv
+# exception utils
 import sys
 # First import library
 import pyrealsense2 as rs
@@ -34,6 +36,21 @@ class BagfileEndException(Exception):
 
 def clipping_background():
     raise NotImplementedError
+
+
+def generate_csv_header(jointname: list[str],
+                        axislist: list[str] = ['x', 'y', 'z'],
+                        other: list[str] = [
+    'framecount', 'timedelta[ms]', 'UNIXtimestamp[ms]',
+        'count', 'datetime', 'millis']) -> str:
+    csvheader = []
+    for joint in jointname:
+        jointaxisname = [f'{joint}_{ax}' for ax in axislist]
+        csvheader.extend(jointaxisname)
+
+    csvheader.extend(other)
+
+    return csvheader
 
 
 def setup_logger(name, logfile='LOGFILENAME.log'):
@@ -88,20 +105,17 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
         logger.warning("Please input bagfile in that folder.")
         exit()
 
-    # for csv header
-    # coord = ['x', 'y', 'z']
-    # header = ['joint' + str(i//3) + '_' + str(coord[i % 3])
-    #          for i in range(est_config["bone_number"] * len(coord))]
-    # header.append('framecount')
-    # header.append('timedelta[ms]')
-    # header.append('UNIXtimestamp[ms]')
-    # header.append('count')
-    # header.append('datetime')
-    # header.append('millis')
+    # estimate outputdir
+    outputdir: str = os.path.dirname(os.path.abspath(__file__)) + '/output'
 
-    # TODO mp poseでランドマークが取得可能。これを元にヘッダを作成する。
-    # mp_poseは33個の特徴点。
-    # mp_pose.PoseLandmarkで取得可能。
+    # outputfolder check
+    if not os.path.exists(outputdir):
+        logger.info(f'generate output dir to {outputdir}')
+        os.makedirs(outputdir)
+
+    # get filename
+    filename = os.path.basename(bagfilepath).split('.')[0]
+    logger.debug(f'execute file : {filename}')
 
     # mediapipe pose instance
     mp_drawing = mp.solutions.drawing_utils
@@ -117,7 +131,40 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
         min_tracking_confidence=0.5
     )
 
+    # for csv header
+    axis_2D = ['x', 'y']
+    axis_3D = ['x', 'y', 'z']
+
+    # media Pipe landmark list
+    landmarklist = [str(i).split('.')[1] for i in list(mp_pose.PoseLandmark)]
+
+    # header info
+    header_2D = generate_csv_header(landmarklist, axis_2D)
+    header_3D = generate_csv_header(landmarklist, axis_3D)
+
+    # open csv stream
+    outfile2D = f'{outputdir}/{filename}_2D.csv'
+    outfile3D = f'{outputdir}/{filename}_3D.csv'
+
+    if os.path.exists(outfile2D):
+        logger.warning('2D pose output file has already exist.')
+        logger.warning('If you want to do this process, delete or remove it.')
+        exit(0)
+
+    if os.path.exists(outfile3D):
+        logger.warning('3D pose output file has already exist.')
+        logger.warning('If you want to do this process, delete or remove it.')
+        exit(0)
+
+    f_2D = open(f'{outfile2D}', 'w')
+    f_3D = open(f'{outfile2D}', 'w')
+    writer_2D = csv.writer(f_2D)
+    writer_3D = csv.writer(f_3D)
+
     try:
+        # write header
+        writer_2D.writerow(header_2D)
+
         # create pipeline
         pipeline = rs.pipeline()
 
@@ -226,9 +273,6 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
                 logger.debug("frame skip occured")
                 continue
 
-            # count update
-            count += 1
-
             # Colorize depth frame to jet colormap
             depth_image = np.asanyarray(depth_frame.get_data())
             color_image = np.asanyarray(color_frame.get_data())
@@ -253,7 +297,22 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
                 mp_pose.POSE_CONNECTIONS,
                 landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
             )
-            
+
+            height, width, _ = bg_remove_color.shape
+
+            logger.info(f'center pixel is ({width/2} , {height/2} )')
+
+            # joint pixels list
+            joint_pixels = []
+
+            for i in mp_pose.PoseLandmark:
+                point_x = results.pose_landmarks.landmark[i].x * width
+                point_y = results.pose_landmarks.landmark[i].y * height
+                point_z = results.pose_landmarks.landmark[i].z * width
+                joint_pixels.extend([point_x, point_y])
+                logger.info("{0} : x {1} , y {2} , z {3}".format(
+                    str(i), point_x, point_y, point_z))
+
             # TODO 二次元座標、三次元座標をcsvファイルに出力する
 
             # RGB composition converting (RGB to BGR)
@@ -284,6 +343,7 @@ def pose_estimate(logfilename: str, est_config: dict, bagfilepath: str = "./src/
 
     finally:
         pose.close()
+        f.close()
 
 
 if __name__ == '__main__':
